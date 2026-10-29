@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/zeebo/blake3"
-	"google.golang.org/protobuf/proto"
 
 	"probundle/internal/rtf"
 	"probundle/internal/rvpb"
@@ -51,10 +50,7 @@ func Summary(w io.Writer, b *Bundle) error {
 	if err != nil {
 		return err
 	}
-	raw := b.Member(name).Data
-	again, _ := proto.MarshalOptions{Deterministic: true}.Marshal(p)
 	fmt.Fprintf(w, "\n== %s ==\n", name)
-	fmt.Fprintf(w, "re-encode byte-identical: %v\n", string(again) == string(raw))
 	PrintPresentation(w, p)
 	return nil
 }

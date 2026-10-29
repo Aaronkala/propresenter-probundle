@@ -80,6 +80,10 @@ func Decode(data []byte) string {
 	// The loop advances i by the length of each escape.
 	for i := 0; i < len(s); i++ {
 		c := s[i]
+		if c == '{' && skipsGroup(s[i+1:]) {
+			i = groupEnd(s, i)
+			continue
+		}
 		if c == '{' || c == '}' || c == '\r' || c == '\n' {
 			continue
 		}
@@ -137,4 +141,33 @@ func Decode(data []byte) string {
 	}
 	flushUnits()
 	return out.String()
+}
+
+// skipsGroup reports whether a group holds metadata (font table, colors, \* destinations), not text.
+func skipsGroup(rest string) bool {
+	for _, p := range []string{`\fonttbl`, `\colortbl`, `\*`, `\stylesheet`, `\info`} {
+		if strings.HasPrefix(rest, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// groupEnd returns the index of the brace that closes the group opened at start.
+func groupEnd(s string, start int) int {
+	depth := 0
+	for i := start; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			i++
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return len(s) - 1
 }
