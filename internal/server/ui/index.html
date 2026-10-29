@@ -46,7 +46,9 @@
   .faint { color: var(--lamp-faint); }
 
   /* Layout */
-  .app { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto auto 1fr; height: 100vh; }
+  /* minmax(0, …) keeps the wide arrangement reel from pushing the side panel off screen. */
+  .app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto auto 1fr; height: 100vh; }
+  .run, main { min-width: 0; }
   header { grid-column: 1 / -1; display: flex; align-items: center; gap: calc(var(--u)*4);
     padding: calc(var(--u)*3) calc(var(--u)*5); border-bottom: 1px solid var(--cable); background: var(--console); }
   header .titles { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
@@ -145,7 +147,8 @@
   .ev:last-child { border-bottom: 0; }
   .ev .who { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; margin-right: var(--u); }
   .ev .who.you { color: var(--focus); } .ev .who.llm { color: var(--go); }
-  .ev .state { float: right; font-size: 10.5px; }
+  .ev .evhead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+  .ev .state { font-size: 10.5px; }
   .ev .state.unread { color: var(--amber); }
   .ev .tgt { color: var(--lamp-dim); }
   .empty { color: var(--lamp-faint); font-size: 12px; }
@@ -361,7 +364,7 @@ function asideHTML() {
     if (you && e.kind !== "edit") state = e.id <= S.delivered ? '<span class="state faint">seen by LLM</span>' : '<span class="state unread">waiting</span>';
     const kind = e.kind === "feedback" ? "" : e.kind === "edit" ? "" : `<b>${esc(e.kind)}</b> `;
     const tgt = e.target ? `<span class="tgt">${esc(e.target.group)}${e.target.slide ? " slide " + e.target.slide : ""}: </span>` : "";
-    return `<div class="ev">${state}<span class="who ${you ? "you" : "llm"}">${you ? "You" : "LLM"}</span>${kind}${tgt}${esc(e.text)}</div>`;
+    return `<div class="ev"><div class="evhead"><span class="who ${you ? "you" : "llm"}">${you ? "You" : "LLM"}</span>${state}</div>${kind}${tgt}${esc(e.text)}</div>`;
   }).join("") || '<div class="empty">Nothing yet.</div>';
   const tchip = target ? `<div class="targetchip">${esc(target.group)}${target.slide ? " slide " + target.slide : ""}<button id="clearTarget" title="Clear">×</button></div>` : "";
   return `<aside>
