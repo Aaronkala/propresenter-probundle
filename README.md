@@ -84,3 +84,8 @@ probundle help                              # all commands
 | `internal/rtf` | Cocoa RTF for slide text |
 | `internal/bundle` | Read/repair, template, build `.pro`, export ZIP + manifest, import |
 | `internal/server` | Local HTTP server and the embedded UI (`ui/index.html`) |
+
+## Agent skill
+
+`skills/probundle/SKILL.md` teaches an agent when and how to use the tool (lyrics rules, feedback loop, finish checks).
+For Claude Code: `ln -s ~/Projects/propresenter-probundle/skills/probundle ~/.claude/skills/probundle`.
