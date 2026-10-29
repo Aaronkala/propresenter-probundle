@@ -11,20 +11,23 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// header is copied byte for byte from the church sample (docs/probundle-format.md, section 4.5).
-const header = `{\rtf1\ansi\ansicpg1252\cocoartf2907
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Bold;}
-{\colortbl;\red255\green255\blue255;\red255\green255\blue255;\red0\green0\blue0;}
-{\*\expandedcolortbl;;\cssrgb\c100000\c100000\c100000;\cssrgb\c0\c0\c0;}
-\deftab1300
-\pard\tx0\pardeftab1300\pardirnatural\qc\partightenfactor0
+// headerEnd is the last control word before the text run in Cocoa RTF from ProPresenter.
+const headerEnd = `\strokec3 `
 
-\f0\b\fs120 \cf2 \outl0\strokewidth-40 \strokec3 `
+// Header returns the part of a prototype slide RTF before the text. The header carries the
+// font and colors, so new slides look like the prototype.
+func Header(prototype []byte) ([]byte, error) {
+	i := strings.LastIndex(string(prototype), headerEnd)
+	if i < 0 {
+		return nil, fmt.Errorf("RTF has no %q before the text", headerEnd)
+	}
+	return prototype[:i+len(headerEnd)], nil
+}
 
-// Encode returns the RTF bytes for plain slide text. "\n" is a line break.
-func Encode(text string) []byte {
+// Encode returns the RTF bytes for plain slide text after header. "\n" is a line break.
+func Encode(header []byte, text string) []byte {
 	var b strings.Builder
-	b.WriteString(header)
+	b.Write(header)
 	for _, r := range norm.NFC.String(text) {
 		switch {
 		case r == '\n':

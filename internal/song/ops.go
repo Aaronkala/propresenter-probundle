@@ -125,7 +125,8 @@ func checkIndex(n, i int, what string) error {
 }
 
 var Ops = []OpSpec{
-	op("song.set", `{"field":"title|artist","value":"..."}`, "Set the song title or artist (CCLI credits).",
+	op("song.set", `{"field":"title|artist|background","value":"..."}`,
+		"Set the song title, artist (CCLI credits) or background video name (see `probundle backgrounds`; empty = default).",
 		func(s *Song, a struct{ Field, Value string }) (string, error) {
 			v := strings.TrimSpace(a.Value)
 			switch a.Field {
@@ -136,8 +137,10 @@ var Ops = []OpSpec{
 				s.Title = v
 			case "artist":
 				s.Artist = v
+			case "background":
+				s.Background = v
 			default:
-				return "", fmt.Errorf("field must be title or artist, not %q", a.Field)
+				return "", fmt.Errorf("field must be title, artist or background, not %q", a.Field)
 			}
 			return fmt.Sprintf("Set %s to %q", a.Field, v), nil
 		}),

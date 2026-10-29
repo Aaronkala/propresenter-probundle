@@ -14,9 +14,11 @@ import (
 const BlankGroup = "Blank"
 
 type Song struct {
-	UUID                string        `json:"uuid"`
-	Title               string        `json:"title"`
-	Artist              string        `json:"artist"`
+	UUID   string `json:"uuid"`
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	// Background is the name of the Blank slide background video; empty means the template default.
+	Background          string        `json:"background"`
 	Groups              []Group       `json:"groups"`
 	Arrangements        []Arrangement `json:"arrangements"`
 	SelectedArrangement string        `json:"selected_arrangement"`
