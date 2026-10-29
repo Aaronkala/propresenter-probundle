@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>probundle</title>
+<style>
+  /* Tokens: a dark production booth. Group colors carry the content; chrome stays quiet. */
+  :root {
+    --booth: #0f1012;      /* room */
+    --console: #16181b;    /* panels */
+    --rack: #1d2024;       /* raised controls */
+    --rack-hover: #24282d;
+    --cable: rgba(255,255,255,.07);   /* borders */
+    --cable-strong: rgba(255,255,255,.13);
+    --lamp: #ebe8e2;       /* projector-warm text */
+    --lamp-dim: #a19f9a;
+    --lamp-faint: #6c6b68;
+    --go: #4cb36b;         /* approve / export: go live */
+    --go-ink: #07140b;
+    --tally: #e5534b;      /* errors */
+    --amber: #e9a23b;      /* warnings, unread */
+    --focus: #6aa7ff;
+    --u: 4px;
+    --r: 5px;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--booth); color: var(--lamp);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { background: var(--rack); border: 1px solid var(--cable-strong); border-radius: var(--r);
+    padding: calc(var(--u)*1.5) calc(var(--u)*3); cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { background: var(--rack-hover); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: transparent; border-color: transparent; color: var(--lamp-dim); padding: var(--u) calc(var(--u)*1.5); }
+  button.ghost:hover { background: var(--rack); color: var(--lamp); }
+  button.go { background: var(--go); border-color: var(--go); color: var(--go-ink); font-weight: 600; }
+  button.go:hover { filter: brightness(1.08); }
+  input[type=text], textarea, select { background: var(--booth); border: 1px solid var(--cable-strong); border-radius: var(--r);
+    padding: calc(var(--u)*1.5) calc(var(--u)*2); }
+  input[type=text]:hover, textarea:hover { border-color: rgba(255,255,255,.2); }
+  .mono { font-family: var(--mono); font-size: 11.5px; }
+  .muted { color: var(--lamp-dim); }
+  .faint { color: var(--lamp-faint); }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto auto 1fr; height: 100vh; }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: calc(var(--u)*4);
+    padding: calc(var(--u)*3) calc(var(--u)*5); border-bottom: 1px solid var(--cable); background: var(--console); }
+  header .titles { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  header input.title { font-size: 20px; font-weight: 650; letter-spacing: -.01em; background: transparent; border-color: transparent; padding: 2px var(--u); width: 100%; }
+  header input.artist { color: var(--lamp-dim); background: transparent; border-color: transparent; padding: 0 var(--u); width: 100%; }
+  header input.title:hover, header input.artist:hover { border-color: var(--cable-strong); }
+  .status { display: flex; align-items: center; gap: calc(var(--u)*2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--go); }
+  .dot.off { background: var(--tally); }
+  .export { display: flex; gap: calc(var(--u)*2); align-items: center; }
+  .export input { width: 320px; font-family: var(--mono); font-size: 11.5px; }
+
+  /* Arrangement strip: the song in play order */
+  .run { grid-column: 1 / 2; border-bottom: 1px solid var(--cable); background: var(--console); padding: calc(var(--u)*3) calc(var(--u)*5); }
+  .run-head { display: flex; align-items: center; gap: calc(var(--u)*2); margin-bottom: calc(var(--u)*2.5); flex-wrap: wrap; }
+  .run-head .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--lamp-faint); margin-right: var(--u); }
+  .tab { display: inline-flex; align-items: center; gap: var(--u); padding: var(--u) calc(var(--u)*2.5); border-radius: var(--r);
+    border: 1px solid transparent; color: var(--lamp-dim); cursor: pointer; background: transparent; }
+  .tab:hover { background: var(--rack); }
+  .tab.on { border-color: var(--cable-strong); background: var(--rack); color: var(--lamp); }
+  .tab .star { color: var(--go); font-size: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: calc(var(--u)*1.5); align-items: center; min-height: 32px; }
+  .chip { display: inline-flex; align-items: center; gap: var(--u); padding: var(--u) calc(var(--u)*1.5) var(--u) calc(var(--u)*2.5);
+    border-radius: var(--r); font-weight: 600; font-size: 12px; cursor: grab; user-select: none;
+    background: color-mix(in srgb, var(--c) 30%, var(--rack)); border: 1px solid color-mix(in srgb, var(--c) 70%, transparent); }
+  .chip.blank { --c: #55585e; }
+  .chip .n { font-family: var(--mono); font-weight: 400; font-size: 10.5px; color: var(--lamp-dim); }
+  .chip button { padding: 0 var(--u); border: 0; background: transparent; color: var(--lamp-dim); line-height: 1; }
+  .chip button:hover { color: var(--lamp); background: transparent; }
+  .chip.dragging { opacity: .35; }
+  .chip.drop-before { box-shadow: -3px 0 0 var(--focus); }
+  .palette { display: flex; gap: calc(var(--u)*1.5); flex-wrap: wrap; margin-top: calc(var(--u)*2.5); align-items: center; }
+  .palette .add { font-size: 11.5px; padding: 2px calc(var(--u)*2); border-radius: var(--r); cursor: pointer;
+    border: 1px dashed color-mix(in srgb, var(--c) 70%, transparent); color: var(--lamp-dim); background: transparent; }
+  .palette .add:hover { color: var(--lamp); background: color-mix(in srgb, var(--c) 18%, transparent); }
+  .reel { display: flex; gap: 3px; overflow-x: auto; margin-top: calc(var(--u)*3); padding-bottom: var(--u); }
+  .reel .mini { flex: 0 0 104px; }
+  .reel .mini .band { height: 3px; background: var(--c); border-radius: 2px 2px 0 0; }
+
+  /* Groups and slides */
+  main { grid-column: 1 / 2; overflow-y: auto; padding: calc(var(--u)*5); }
+  .group { display: grid; grid-template-columns: 4px 1fr; margin-bottom: calc(var(--u)*6); }
+  .group .band { background: var(--c); border-radius: 2px; }
+  .group .body { padding-left: calc(var(--u)*4); }
+  .ghead { display: flex; align-items: center; gap: calc(var(--u)*2); margin-bottom: calc(var(--u)*3); }
+  .ghead input.gname { font-weight: 650; font-size: 15px; background: transparent; border-color: transparent; width: 220px; }
+  .ghead input.gname:hover { border-color: var(--cable-strong); }
+  .ghead .lib { font-size: 10.5px; color: var(--lamp-faint); border: 1px solid var(--cable); border-radius: var(--r); padding: 0 var(--u); }
+  .swatch { width: 22px; height: 22px; border-radius: var(--r); border: 1px solid var(--cable-strong); padding: 0; background: none; cursor: pointer; }
+  .swatch::-webkit-color-swatch-wrapper { padding: 2px; }
+  .swatch::-webkit-color-swatch { border: 0; border-radius: 3px; }
+  .ghead .spacer { flex: 1; }
+  .slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: calc(var(--u)*4); }
+  .card { background: var(--console); border: 1px solid var(--cable); border-radius: calc(var(--r) + 2px); overflow: hidden; }
+  .card.flagged { border-color: color-mix(in srgb, var(--amber) 55%, transparent); }
+  .card.target { border-color: var(--focus); }
+  .card textarea { display: block; width: 100%; border: 0; border-top: 1px solid var(--cable); border-radius: 0; resize: vertical;
+    min-height: 58px; background: var(--console); padding: calc(var(--u)*2) calc(var(--u)*3); line-height: 1.4; }
+  .card textarea:focus { background: var(--booth); }
+  .cfoot { display: flex; align-items: center; gap: var(--u); padding: var(--u) calc(var(--u)*1.5) var(--u) calc(var(--u)*3); border-top: 1px solid var(--cable); }
+  .cfoot .num { font-family: var(--mono); font-size: 11px; color: var(--lamp-faint); }
+  .cfoot .warn { font-size: 11px; color: var(--amber); }
+  .cfoot .spacer { flex: 1; }
+  .addslide { border: 1px dashed var(--cable-strong); border-radius: calc(var(--r) + 2px); background: transparent; color: var(--lamp-dim);
+    min-height: 120px; display: flex; align-items: center; justify-content: center; }
+  .addslide:hover { color: var(--lamp); background: var(--console); }
+  .addgroup { display: flex; gap: calc(var(--u)*2); align-items: center; padding-left: calc(var(--u)*5); }
+
+  /* The projected slide, drawn with the template's geometry */
+  .slide { position: relative; aspect-ratio: 16 / 9; background: #000; container-type: inline-size; overflow: hidden; }
+  .slide .box { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+  .slide .txt { color: #fff; text-transform: uppercase; font-weight: 700; line-height: 1.12; white-space: pre-wrap; overflow-wrap: break-word;
+    paint-order: stroke fill; -webkit-text-stroke: calc(var(--stroke) * 2) #000; width: 100%; }
+  .slide .meta { position: absolute; inset: auto 0 0 0; padding: 2cqw 3cqw; font-size: 4.4cqw; color: rgba(255,255,255,.55); text-align: left;
+    font-family: -apple-system, sans-serif; text-transform: none; }
+  .slide.blankslide { background: radial-gradient(120% 90% at 30% 20%, #2a1e4a 0%, #0b0b10 55%, #000 100%); }
+  .mini .slide .txt { -webkit-text-stroke: 0; }
+
+  /* Side panel: talk to the LLM */
+  aside { grid-column: 2; grid-row: 2 / 4; border-left: 1px solid var(--cable); background: var(--console); display: flex; flex-direction: column; min-height: 0; }
+  aside section { padding: calc(var(--u)*4); border-bottom: 1px solid var(--cable); }
+  aside h2 { margin: 0 0 calc(var(--u)*2.5); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--lamp-faint); font-weight: 600; }
+  .compose textarea { width: 100%; min-height: 88px; resize: vertical; }
+  .targetchip { display: inline-flex; gap: var(--u); align-items: center; font-size: 11.5px; padding: 2px calc(var(--u)*2);
+    border-radius: var(--r); background: color-mix(in srgb, var(--focus) 18%, transparent); color: var(--lamp); margin-bottom: calc(var(--u)*2); }
+  .targetchip button { padding: 0 2px; border: 0; background: transparent; color: var(--lamp-dim); }
+  .row { display: flex; gap: calc(var(--u)*2); margin-top: calc(var(--u)*2.5); }
+  .row .grow { flex: 1; }
+  .issues { max-height: 180px; overflow-y: auto; }
+  .issue { display: grid; grid-template-columns: 8px 1fr; gap: calc(var(--u)*2); padding: calc(var(--u)*1.5) 0; font-size: 12px; }
+  .issue .mark { width: 8px; height: 8px; border-radius: 2px; margin-top: 5px; background: var(--amber); }
+  .issue.error .mark { background: var(--tally); }
+  .issue b { font-weight: 600; }
+  .log { flex: 1; overflow-y: auto; padding: calc(var(--u)*4); }
+  .ev { padding: calc(var(--u)*2) 0; border-bottom: 1px solid var(--cable); font-size: 12px; }
+  .ev:last-child { border-bottom: 0; }
+  .ev .who { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; margin-right: var(--u); }
+  .ev .who.you { color: var(--focus); } .ev .who.llm { color: var(--go); }
+  .ev .state { float: right; font-size: 10.5px; }
+  .ev .state.unread { color: var(--amber); }
+  .ev .tgt { color: var(--lamp-dim); }
+  .empty { color: var(--lamp-faint); font-size: 12px; }
+  .toast { position: fixed; bottom: calc(var(--u)*5); left: 50%; transform: translateX(-50%); background: var(--rack); border: 1px solid var(--cable-strong);
+    border-radius: var(--r); padding: calc(var(--u)*2) calc(var(--u)*4); opacity: 0; transition: opacity .15s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.err { border-color: var(--tally); }
+</style>
+</head>
+<body>
+<div class="app" id="app"><header><span class="muted">Loading…</span></header></div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+let S = null;              // last view from the server
+let connected = true;
+let dirty = false;         // a state arrived while the user was typing
+let selectedArr = null;    // arrangement shown in the strip
+let target = null;         // {group, slide} the next feedback points at
+let draft = "";            // feedback composer text survives re-renders
+let dragFrom = null;       // {kind: "chip", index} or {kind: "palette", name}
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function toast(msg, err) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.className = "toast", 2400);
+}
+
+async function post(url, body) {
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+async function op(name, args) {
+  try { setState(await post("/api/op", {op: name, args})); }
+  catch (e) { toast(e.message, true); render(); }
+}
+
+function setState(v) {
+  const prevRev = S && S.revision;
+  const prevLast = S && S.events.length ? S.events[S.events.length - 1].id : 0;
+  S = v;
+  if (prevRev != null && v.revision !== prevRev) {
+    const fresh = v.events.filter(e => e.id > prevLast && e.source === "cli" && e.kind === "edit");
+    if (fresh.length) toast("LLM: " + fresh[fresh.length - 1].text);
+  }
+  if (!selectedArr || !v.song.arrangements.some(a => a.name === selectedArr)) {
+    selectedArr = v.song.selected_arrangement || (v.song.arrangements[0] || {}).name || null;
+  }
+  if (editing()) { dirty = true; return; }
+  render();
+}
+
+function editing() {
+  const a = document.activeElement;
+  return a && a.closest("main, header .titles") && (a.tagName === "TEXTAREA" || a.tagName === "INPUT");
+}
+
+async function poll() {
+  for (;;) {
+    try {
+      const r = await fetch("/api/state" + (S ? "?after=" + S.revision : ""));
+      if (!r.ok) throw new Error(r.statusText);
+      const v = await r.json();
+      if (!connected) { connected = true; render(); }
+      if (!S || v.revision !== S.revision) setState(v);
+    } catch (e) {
+      if (connected) { connected = false; if (S) render(); }
+      await new Promise(res => setTimeout(res, 1500));
+    }
+  }
+}
+
+document.addEventListener("focusout", () => setTimeout(() => { if (dirty && !editing()) { dirty = false; render(); } }, 0));
+
+/* ---------- slide drawing ---------- */
+function slideHTML(text, opts = {}) {
+  const st = S.slide, pct = (v, of) => (v / of * 100) + "%";
+  const font = `"${st.font_family}", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  const size = (st.font_size / st.width * 100) + "cqw";
+  const stroke = (1 / st.width * 100) + "cqw";
+  return `<div class="slide"><div class="box" style="left:${pct(st.x, st.width)};top:${pct(st.y, st.height)};width:${pct(st.w, st.width)};height:${pct(st.h, st.height)}">
+    <div class="txt" style="font-family:${esc(font)};font-size:${size};--stroke:${stroke}">${esc(text)}</div></div></div>`;
+}
+function blankSlideHTML(label) {
+  return `<div class="slide blankslide"><div class="meta">${esc(label)}</div></div>`;
+}
+
+function groupColor(name) {
+  if (name === "Blank") return "#55585e";
+  const g = S.song.groups.find(g => g.name === name);
+  return g ? g.color : "#55585e";
+}
+
+/* ---------- render ---------- */
+function render() {
+  if (!S) return;
+  const s = S.song;
+  const scroll = $("main") ? $("main").scrollTop : 0;
+  $("#app").innerHTML = headerHTML(s) + runHTML(s) + `<main>${blankGroupHTML(s)}${s.groups.map(groupHTML).join("")}${addGroupHTML()}</main>` + asideHTML();
+  if ($("main")) $("main").scrollTop = scroll;
+  bind();
+  measure();
+}
+
+function headerHTML(s) {
+  const errors = S.issues.filter(i => i.level === "error").length;
+  return `<header>
+    <div class="titles">
+      <input class="title" type="text" value="${esc(s.title)}" data-field="title" aria-label="Song title">
+      <input class="artist" type="text" value="${esc(s.artist)}" data-field="artist" placeholder="Artist" aria-label="Artist">
+    </div>
+    <div class="status mono muted"><span class="dot ${connected ? "" : "off"}"></span>${connected ? "rev " + S.revision : "disconnected"}</div>
+    <div class="export">
+      <input type="text" id="exportPath" value="${esc(S.export_path)}" aria-label="Export path">
+      <button class="go" id="exportBtn" ${errors ? "disabled title=\"Fix the errors first\"" : ""}>Export .probundle</button>
+    </div>
+  </header>`;
+}
+
+function runHTML(s) {
+  const arr = s.arrangements.find(a => a.name === selectedArr);
+  const tabs = s.arrangements.map(a => `<span class="tab ${a.name === selectedArr ? "on" : ""}" data-tab="${esc(a.name)}" title="Double-click to rename">
+      ${a.name === s.selected_arrangement ? '<span class="star" title="Selected in ProPresenter">●</span>' : ""}${esc(a.name)}</span>`).join("");
+  let chips = '<span class="empty">No arrangement. Create one to set the song order.</span>', reel = "", palette = "", tools = "";
+  if (arr) {
+    chips = arr.groups.map((n, i) => `<span class="chip ${n === "Blank" ? "blank" : ""}" draggable="true" data-chip="${i}" style="--c:${esc(groupColor(n))}">
+        <span class="n">${i + 1}</span>${esc(n)}<button data-chip-del="${i}" title="Remove from arrangement">×</button></span>`).join("")
+      || '<span class="empty">Empty. Add groups below.</span>';
+    palette = ["Blank", ...s.groups.map(g => g.name)].map(n =>
+      `<span class="add" draggable="true" data-pal="${esc(n)}" style="--c:${esc(groupColor(n))}">+ ${esc(n)}</span>`).join("");
+    reel = arr.groups.flatMap(n => {
+      if (n === "Blank") return [`<div class="mini" style="--c:#55585e"><div class="band"></div>${blankSlideHTML("Blank")}</div>`];
+      const g = s.groups.find(g => g.name === n);
+      return g ? g.slides.map(t => `<div class="mini" style="--c:${esc(g.color)}"><div class="band"></div>${slideHTML(t)}</div>`) : [];
+    }).join("");
+    tools = `<span class="spacer" style="flex:1"></span>
+      ${arr.name !== s.selected_arrangement ? `<button class="ghost" id="arrSelect">Use in ProPresenter</button>` : ""}
+      <button class="ghost" id="arrDelete">Delete</button>`;
+  }
+  return `<section class="run">
+    <div class="run-head"><span class="label">Arrangement</span>${tabs}<button class="ghost" id="arrNew">+ New</button>${tools}</div>
+    <div class="chips" id="chips">${chips}</div>
+    ${arr ? `<div class="palette"><span class="faint" style="font-size:11.5px">Add:</span>${palette}</div>` : ""}
+    ${reel ? `<div class="reel">${reel}</div>` : ""}
+  </section>`;
+}
+
+function blankGroupHTML(s) {
+  const bg = s.background || S.default_background;
+  const opts = S.backgrounds.map(b => `<option value="${esc(b === S.default_background ? "" : b)}" ${b === bg ? "selected" : ""}>${esc(b)}${b === S.default_background ? " (default)" : ""}</option>`).join("");
+  return `<div class="group" style="--c:#55585e"><div class="band"></div><div class="body">
+    <div class="ghead"><span style="font-weight:650;font-size:15px;padding:0 8px">Blank</span><span class="faint">Built in: empty slide, worship look macro, background video</span></div>
+    <div class="slides"><div class="card">${blankSlideHTML(bg)}
+      <div class="cfoot"><span class="num">Background</span><span class="spacer"></span>
+        <select id="bgSelect" aria-label="Background video" style="max-width:220px">${opts}</select></div></div></div>
+  </div></div>`;
+}
+
+function slideWarnings(text) {
+  const lines = text.split("\n"), w = [];
+  if (lines.length > S.max_slide_lines) w.push(lines.length + " lines");
+  if (lines.some(l => [...l].length > S.max_line_chars)) w.push("long line");
+  return w;
+}
+
+function groupHTML(g, gi) {
+  const lib = S.library_groups.includes(g.name);
+  const slides = g.slides.map((t, si) => {
+    const isTarget = target && target.group === g.name && target.slide === si + 1;
+    const warns = slideWarnings(t);
+    return `<div class="card ${warns.length ? "flagged" : ""} ${isTarget ? "target" : ""}" data-g="${gi}" data-s="${si}">
+      ${slideHTML(t)}
+      <textarea data-slide-text rows="2" aria-label="${esc(g.name)} slide ${si + 1}">${esc(t)}</textarea>
+      <div class="cfoot"><span class="num">${si + 1}</span><span class="warn" data-warn>${esc(warns.join(" · "))}</span><span class="spacer"></span>
+        <button class="ghost" data-act="comment" title="Comment on this slide for the LLM">Comment</button>
+        <button class="ghost" data-act="left" ${si === 0 ? "disabled" : ""} title="Move earlier">←</button>
+        <button class="ghost" data-act="right" ${si === g.slides.length - 1 ? "disabled" : ""} title="Move later">→</button>
+        <button class="ghost" data-act="del" title="Delete slide">×</button></div>
+    </div>`;
+  }).join("");
+  return `<div class="group" style="--c:${esc(g.color)}" data-group="${gi}"><div class="band"></div><div class="body">
+    <div class="ghead">
+      <input class="swatch" type="color" value="${esc(g.color.toLowerCase())}" data-gcolor aria-label="Group color">
+      <input class="gname" type="text" value="${esc(g.name)}" data-gname aria-label="Group name">
+      ${lib ? '<span class="lib" title="Linked to the church library group with this name">library</span>' : ""}
+      <span class="faint">${g.slides.length} slide${g.slides.length === 1 ? "" : "s"}</span>
+      <span class="spacer"></span>
+      <button class="ghost" data-gact="comment">Comment</button>
+      <button class="ghost" data-gact="up" ${gi === 0 ? "disabled" : ""} title="Move group up">↑</button>
+      <button class="ghost" data-gact="down" ${gi === S.song.groups.length - 1 ? "disabled" : ""} title="Move group down">↓</button>
+      <button class="ghost" data-gact="del" title="Delete group">Delete</button>
+    </div>
+    <div class="slides">${slides}<button class="addslide" data-gact="addslide">+ Slide</button></div>
+  </div></div>`;
+}
+
+function addGroupHTML() {
+  return `<div class="addgroup"><input type="text" id="newGroup" placeholder="New group name, e.g. Verse 2"><button id="addGroup">Add group</button></div>`;
+}
+
+function asideHTML() {
+  const issues = S.issues.length ? S.issues.map(i => `<div class="issue ${i.level}"><span class="mark"></span><span><b>${esc(i.where)}</b> ${esc(i.message)}</span></div>`).join("")
+    : '<div class="empty">No issues.</div>';
+  const evs = S.events.slice().reverse().slice(0, 60).map(e => {
+    const you = e.source === "ui";
+    let state = "";
+    if (you && e.kind !== "edit") state = e.id <= S.delivered ? '<span class="state faint">seen by LLM</span>' : '<span class="state unread">waiting</span>';
+    const kind = e.kind === "feedback" ? "" : e.kind === "edit" ? "" : `<b>${esc(e.kind)}</b> `;
+    const tgt = e.target ? `<span class="tgt">${esc(e.target.group)}${e.target.slide ? " slide " + e.target.slide : ""}: </span>` : "";
+    return `<div class="ev">${state}<span class="who ${you ? "you" : "llm"}">${you ? "You" : "LLM"}</span>${kind}${tgt}${esc(e.text)}</div>`;
+  }).join("") || '<div class="empty">Nothing yet.</div>';
+  const tchip = target ? `<div class="targetchip">${esc(target.group)}${target.slide ? " slide " + target.slide : ""}<button id="clearTarget" title="Clear">×</button></div>` : "";
+  return `<aside>
+    <section class="compose"><h2>Message to the LLM</h2>${tchip}
+      <textarea id="draft" placeholder="What should change? Example: split the chorus into three slides.">${esc(draft)}</textarea>
+      <div class="row"><button class="grow" id="sendFb">Send feedback</button><button class="go" id="approve" title="Tell the LLM the song is ready">Approve</button></div>
+    </section>
+    <section><h2>Issues</h2><div class="issues">${issues}</div></section>
+    <div class="log"><h2>History</h2>${evs}</div>
+  </aside>`;
+}
+
+/* ---------- interaction ---------- */
+function bind() {
+  const s = S.song;
+  document.querySelectorAll("header input[data-field]").forEach(el => el.addEventListener("change", () =>
+    op("song.set", {field: el.dataset.field, value: el.value})));
+  $("#exportBtn").addEventListener("click", async () => {
+    try { setState(await post("/api/export", {path: $("#exportPath").value})); toast("Exported " + S.export_path); }
+    catch (e) { toast(e.message, true); }
+  });
+  $("#bgSelect").addEventListener("change", e => op("song.set", {field: "background", value: e.target.value}));
+
+  // Arrangements
+  document.querySelectorAll("[data-tab]").forEach(el => {
+    el.addEventListener("click", () => { selectedArr = el.dataset.tab; render(); });
+    el.addEventListener("dblclick", () => {
+      const nn = prompt("Rename arrangement", el.dataset.tab);
+      if (nn && nn !== el.dataset.tab) { selectedArr = nn; op("arrangement.rename", {name: el.dataset.tab, new_name: nn}); }
+    });
+  });
+  $("#arrNew").addEventListener("click", () => {
+    const name = prompt("New arrangement name", s.arrangements.length ? "Short" : "Standard");
+    if (!name) return;
+    selectedArr = name;
+    op("arrangement.set", {name, groups: ["Blank", ...s.groups.map(g => g.name)]});
+  });
+  const arr = s.arrangements.find(a => a.name === selectedArr);
+  if (arr) {
+    const setGroups = groups => op("arrangement.set", {name: arr.name, groups});
+    if ($("#arrSelect")) $("#arrSelect").addEventListener("click", () => op("arrangement.select", {name: arr.name}));
+    $("#arrDelete").addEventListener("click", () => { if (confirm(`Delete arrangement "${arr.name}"?`)) op("arrangement.remove", {name: arr.name}); });
+    document.querySelectorAll("[data-chip-del]").forEach(b => b.addEventListener("click", e => {
+      e.stopPropagation(); const g = arr.groups.slice(); g.splice(+b.dataset.chipDel, 1); setGroups(g);
+    }));
+    document.querySelectorAll("[data-pal]").forEach(p => {
+      p.addEventListener("click", () => setGroups([...arr.groups, p.dataset.pal]));
+      p.addEventListener("dragstart", e => { dragFrom = {kind: "palette", name: p.dataset.pal}; e.dataTransfer.effectAllowed = "copy"; });
+    });
+    const chips = [...document.querySelectorAll("[data-chip]")];
+    chips.forEach(c => {
+      c.addEventListener("dragstart", e => { dragFrom = {kind: "chip", index: +c.dataset.chip}; c.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; });
+      c.addEventListener("dragend", () => c.classList.remove("dragging"));
+      c.addEventListener("dragover", e => { e.preventDefault(); c.classList.add("drop-before"); });
+      c.addEventListener("dragleave", () => c.classList.remove("drop-before"));
+      c.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); dropAt(+c.dataset.chip); });
+    });
+    const box = $("#chips");
+    box.addEventListener("dragover", e => e.preventDefault());
+    box.addEventListener("drop", e => { e.preventDefault(); dropAt(arr.groups.length); });
+    function dropAt(to) {
+      if (!dragFrom) return;
+      const g = arr.groups.slice();
+      if (dragFrom.kind === "chip") {
+        const [m] = g.splice(dragFrom.index, 1);
+        g.splice(dragFrom.index < to ? to - 1 : to, 0, m);
+      } else g.splice(to, 0, dragFrom.name);
+      dragFrom = null; setGroups(g);
+    }
+  }
+
+  // Groups
+  document.querySelectorAll("[data-group]").forEach(el => {
+    const g = s.groups[+el.dataset.group], gi = +el.dataset.group;
+    $("[data-gname]", el).addEventListener("change", e => op("group.rename", {name: g.name, new_name: e.target.value}));
+    $("[data-gcolor]", el).addEventListener("change", e => op("group.color", {name: g.name, color: e.target.value}));
+    el.querySelectorAll("[data-gact]").forEach(b => b.addEventListener("click", () => {
+      switch (b.dataset.gact) {
+        case "comment": setTarget({group: g.name}); break;
+        case "up": op("group.move", {name: g.name, index: gi}); break;
+        case "down": op("group.move", {name: g.name, index: gi + 2}); break;
+        case "del": if (confirm(`Delete group "${g.name}" and its ${g.slides.length} slides?`)) op("group.remove", {name: g.name}); break;
+        case "addslide": op("slide.add", {group: g.name, text: "New slide"}); break;
+      }
+    }));
+  });
+  document.querySelectorAll(".card[data-g]").forEach(card => {
+    const g = s.groups[+card.dataset.g], si = +card.dataset.s, ta = $("textarea", card);
+    ta.addEventListener("input", () => {
+      $(".txt", card).textContent = ta.value;
+      $("[data-warn]", card).textContent = slideWarnings(ta.value).join(" · ");
+      measureCard(card);
+    });
+    ta.addEventListener("change", () => { if (ta.value !== g.slides[si]) op("slide.set", {group: g.name, index: si + 1, text: ta.value}); });
+    card.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => {
+      switch (b.dataset.act) {
+        case "comment": setTarget({group: g.name, slide: si + 1}); break;
+        case "left": op("slide.move", {group: g.name, index: si + 1, to_index: si}); break;
+        case "right": op("slide.move", {group: g.name, index: si + 1, to_index: si + 2}); break;
+        case "del": op("slide.remove", {group: g.name, index: si + 1}); break;
+      }
+    }));
+  });
+  const addGroup = () => { const n = $("#newGroup").value.trim(); if (n) op("group.add", {name: n, slides: ["New slide"]}); };
+  $("#addGroup").addEventListener("click", addGroup);
+  $("#newGroup").addEventListener("keydown", e => { if (e.key === "Enter") addGroup(); });
+
+  // Feedback
+  $("#draft").addEventListener("input", e => draft = e.target.value);
+  if ($("#clearTarget")) $("#clearTarget").addEventListener("click", () => setTarget(null));
+  $("#sendFb").addEventListener("click", async () => {
+    if (!draft.trim()) { toast("Write the feedback first", true); return; }
+    try { setState(await post("/api/feedback", {kind: "feedback", text: draft, target})); draft = ""; target = null; render(); toast("Sent to the LLM"); }
+    catch (e) { toast(e.message, true); }
+  });
+  $("#approve").addEventListener("click", async () => {
+    try { setState(await post("/api/feedback", {kind: "approve", text: draft, target: null})); draft = ""; render(); toast("Approved"); }
+    catch (e) { toast(e.message, true); }
+  });
+}
+
+function setTarget(t) { target = t; render(); if (t) $("#draft").focus(); }
+
+// Flag slides whose text wraps or overflows the template text box.
+function measureCard(card) {
+  const box = $(".box", card), txt = $(".txt", card), warn = $("[data-warn]", card);
+  if (!box || !txt || !warn) return;
+  const lines = txt.textContent.split("\n").length;
+  const lh = parseFloat(getComputedStyle(txt).lineHeight);
+  const rendered = Math.round(txt.scrollHeight / lh);
+  const notes = warn.textContent ? warn.textContent.split(" · ") : [];
+  if (txt.scrollHeight > box.clientHeight + 1) notes.push("overflows");
+  else if (rendered > lines) notes.push("wraps on screen");
+  warn.textContent = [...new Set(notes)].join(" · ");
+  card.classList.toggle("flagged", notes.length > 0);
+}
+function measure() { document.querySelectorAll(".card[data-g]").forEach(measureCard); }
+
+poll();
+</script>
+</body>
+</html>
