@@ -45,19 +45,19 @@ func DefaultExportPath(state string, st *store.State) string {
 }
 
 type view struct {
-	Revision          int          `json:"revision"`
-	Song              song.Song    `json:"song"`
-	Issues            []song.Issue `json:"issues"`
+	Revision          int           `json:"revision"`
+	Song              song.Song     `json:"song"`
+	Issues            []song.Issue  `json:"issues"`
 	Events            []store.Event `json:"events"`
-	Delivered         int          `json:"delivered"`
-	ExportPath        string       `json:"export_path"`
-	Backgrounds       []string     `json:"backgrounds"`
-	DefaultBackground string       `json:"default_background"`
-	LibraryGroups     []string     `json:"library_groups"`
-	StatePath         string       `json:"state_path"`
-	MaxLineChars      int          `json:"max_line_chars"`
-	MaxSlideLines     int          `json:"max_slide_lines"`
-	Slide             slideStyle   `json:"slide"`
+	Delivered         int           `json:"delivered"`
+	ExportPath        string        `json:"export_path"`
+	Backgrounds       []string      `json:"backgrounds"`
+	DefaultBackground string        `json:"default_background"`
+	LibraryGroups     []string      `json:"library_groups"`
+	StatePath         string        `json:"state_path"`
+	MaxLineChars      int           `json:"max_line_chars"`
+	MaxSlideLines     int           `json:"max_slide_lines"`
+	Slide             slideStyle    `json:"slide"`
 }
 
 // slideStyle lets the UI draw previews with the template's text box and font.

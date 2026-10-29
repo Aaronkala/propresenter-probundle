@@ -1,8 +1,11 @@
 # ProPresenter `.probundle` format (reverse engineered)
 
-Sample: `samples/Suuruutes Äärellä.probundle`.
-Exported by ProPresenter 21.x on the church production Mac (user `tuotanto`).
-Inspect any bundle with `tools/inspect_probundle.py BUNDLE [--json|--extract DIR]`.
+Samples (both exported by ProPresenter 21.x on the church production Mac, user `tuotanto`):
+
+- `samples/Suuruutes Äärellä.probundle`: sections 2 to 4.6 describe this sample unless they say otherwise.
+- `samples/Nimesi sun.probundle`: section 4.7 lists how it is different.
+
+Inspect any bundle with `probundle inspect BUNDLE [--json]`.
 
 Status labels in this document:
 
@@ -46,7 +49,7 @@ Observed writer properties:
 - **Writer bug**: the "size of central directory" value in the ZIP64 end record and in the classic end
   record is 98 bytes too large. 98 = 56 (ZIP64 end record) + 20 (ZIP64 locator) + 22 (end record).
   The writer counts the end records as part of the central directory.
-  Python `zipfile` rejects the file. `unzip` warns and continues. `inspect_probundle.py` patches the value in memory.
+  Python `zipfile` rejects the file. `unzip` warns and continues. `bundle.Read` repairs the value in memory.
 
 Inference for the generator: a standard, valid ZIP (stored, UTF-8 names) is the safe choice.
 ProPresenter must read normal ZIP files, because it reads its own bundles with this bug.
@@ -258,25 +261,67 @@ Encoding rules for `{TEXT}`:
 `media.audio` is an empty message. `ROOT_SHOW` (enum 10) resolves relative to the bundle on import.
 Inference: on import, ProPresenter copies the media into its library and rewrites the URL.
 
-## 5. Implications for a generator
+### 4.7 Second sample: `Nimesi sun`
 
-- Build the `.pro` from the sample as a template: copy the Blank cue unchanged (macro + background),
-  and clone the lyric cue for each slide. Change only UUIDs, `rtf_data` and `range.end`.
-  This keeps every styling field ProPresenter expects, including fields with no schema name.
-- New UUIDs for presentation, arrangement, groups, cues, actions, slides and elements.
-  Uppercase in the `.pro`, lowercase in the manifest.
-  Inference: keep the Blank group `application_group_identifier`, the macro UUID and the asset UUID unchanged,
-  because they point to objects that exist on the church Mac.
-- Name the `.pro` member `<Song title>.pro` (NFD). Set `ccli.song_title` and `ccli.artist_credits`.
-- Background video: either embed the same mp4 (13.7 MB per bundle, as the export does), or test whether
-  an import without the mp4 resolves the asset UUID to the existing library media. Not tested.
-- Write a valid ZIP (section 2) and a manifest with correct BLAKE3 hashes (section 3).
+Observed. The ZIP layout, manifest and the writer bug are the same (central directory size +98).
+The `.pro` is different in these ways:
+
+| Topic | Suuruutes Äärellä | Nimesi sun |
+|-------|-------------------|------------|
+| `Presentation.name` | not set | `"Nimesi sun"` |
+| Group layout | one group per slide (9 groups) | **one group per section with several cues**: Verse 1 (4), Chorus (5), Bridge (3) |
+| Blank group | named `"Blank"`, black color, library link | **no name, no color, no library link**; it is the first group and its cue has the media action |
+| Blank cue | slide with no elements | cue `name "Slide 1"`; the slide has one text element with empty RTF (`{\fonttbl}` only) |
+| `application_group_identifier` | only on Blank | on every group: Verse 1 `C21BB9F1-…`, Chorus `43445067-…`, Bridge `77BE1C27-…` |
+| Background | `Thermal Glow Electric - Medium - HD 1080.mp4` | `Thermal Glow Steady - Fast - HD 1080.mp4` |
+| Macro | `Worship slides look` | same UUID and name |
+| Font | `Helvetica-Bold` / `Helvetica` | `BeausiteClassic-Bold` / `Beausite Classic`; RTF font table `\fnil\fcharset0 BeausiteClassic-Regular` |
+| Text box | origin (150, 100), 1620x880 | origin (49.8, 292.5), 1820.47x495.04 (2 cues have unrounded origin) |
+| `chord_pro.color` | yellow (0.993, 0.76, 0.032) | white |
+| Lyric text | normal case | typed in CAPITALS |
+| Arrangement | starts with Blank | starts with the unnamed Blank group |
+
+Conclusions:
+
+- "One group per section" (Nimesi sun) is the current house style. The user confirmed that the
+  Suuruutes Äärellä layout was a mistake.
+- Group colors are the same in both songs: Verse 1 `#0077CC`, Verse 2 `#005999`, Chorus `#CC004E`, Bridge `#7600CC`.
+- The library link (`application_group_identifier`) depends on the group name, not on the song.
+  It is a reference to a group in the church library.
+- The RTF header comes from the slide style. A generator must copy it from the prototype slide, not hard-code it.
+
+## 5. Generator design (`probundle`)
+
+Decisions taken in `internal/bundle`:
+
+- **Template.** `internal/bundle/template.pro` is made by `go run ./cmd/make-template` from the samples.
+  It is a presentation used as a container:
+  - the group whose cue has a media action is the Blank prototype (Nimesi sun);
+  - the group whose cue has a text element is the lyric prototype (Nimesi sun, Beausite Classic style);
+  - groups without cues are the library groups (name, color, `application_group_identifier`) from all samples;
+  - cues that no group references are the background choices, one media action each, named after the video file.
+- **Build.** Clone the Blank cue and put the chosen background media action into it. Clone the lyric cue
+  for each slide; change only UUIDs, `rtf_data` and `custom_attributes[].range` (0, UTF-16 length).
+  RTF header = prototype RTF up to and including `\strokec3 `.
+- **Groups.** One `CueGroup` per song group, with one cue per slide. Group color from the song.
+  `application_group_identifier` from the library group with the same name, if any.
+- **UUIDs.** Version 5 UUIDs derived from the song UUID and the object path, so an export of the same
+  song always gives the same `.pro` bytes. Kept unchanged: macro UUID, library group links, media asset ID
+  (unknown field 10) and media element UUID, because they point to objects on the church Mac.
+- **Media.** No mp4 in the bundle. The media URL points to the original file on the church Mac:
+  `absolute_string file:///Users/tuotanto/Documents/…`, `platform PLATFORM_MACOS`, and
+  `local { root ROOT_USER_DOCUMENTS, path "MotionBackgrounds2026/…" }`, written in all three places
+  (`url`, `video.file.local_url`, unknown `video` field 6).
+  This follows the user's answer: assume the import works without the embedded video.
+- **Name.** `.pro` member `<title>.pro` in NFD; `Presentation.name` = title; `ccli.song_title`, `ccli.artist_credits`.
+- **ZIP.** Standard ZIP from Go `archive/zip`: stored, UTF-8 flag set, correct central directory.
+  Member order: manifest, then `.pro`. Manifest has one document, empty `media` and `media_references`.
 
 ## 6. Open questions (need a ProPresenter machine)
 
-1. Does import work without `.procore/legacy-export-manifest.json`?
-2. Does import work without the embedded mp4, if the asset UUID already exists in the library?
-3. Does import create duplicate media each time the same asset is imported?
-4. Does a standard ZIP (correct central directory size, UTF-8 flag set) import correctly? Expected: yes.
-5. Is "one group per slide" a deliberate house style, or an artifact of how the song was made?
-   ProPresenter also supports one group with many cues.
+1. Does import work without `.procore/legacy-export-manifest.json`? (The generator writes one.)
+2. Does import resolve the background video from its original path when the bundle has no mp4?
+   If not, the generator must embed the mp4 and point `url` to `ROOT_SHOW` (section 4.6).
+3. Does a standard ZIP (correct central directory size, UTF-8 flag set) import correctly? Expected: yes.
+4. Does the asset ID (unknown media field 10) make ProPresenter reuse its library asset, or does it
+   create a duplicate media entry for each imported song?

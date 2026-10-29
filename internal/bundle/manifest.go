@@ -10,15 +10,15 @@ import (
 
 // Manifest is .procore/legacy-export-manifest.json. Field order follows the ProPresenter export.
 type Manifest struct {
-	Version               int                 `json:"version"`
-	TargetContract        string              `json:"target_contract"`
-	SourceRoot            string              `json:"source_root"`
-	TargetRoot            string              `json:"target_root"`
-	Documents             []ManifestDocument  `json:"documents"`
-	Media                 []ManifestMedia     `json:"media"`
-	MediaReferences       []ManifestMediaRef  `json:"media_references"`
-	CompatibilityWarnings []string            `json:"compatibility_warnings"`
-	ElapsedMillis         int                 `json:"elapsed_millis"`
+	Version               int                `json:"version"`
+	TargetContract        string             `json:"target_contract"`
+	SourceRoot            string             `json:"source_root"`
+	TargetRoot            string             `json:"target_root"`
+	Documents             []ManifestDocument `json:"documents"`
+	Media                 []ManifestMedia    `json:"media"`
+	MediaReferences       []ManifestMediaRef `json:"media_references"`
+	CompatibilityWarnings []string           `json:"compatibility_warnings"`
+	ElapsedMillis         int                `json:"elapsed_millis"`
 }
 
 type ManifestDocument struct {

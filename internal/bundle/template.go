@@ -25,14 +25,14 @@ import (
 var templatePro []byte
 
 type Template struct {
-	Pres       *rvpb.Presentation
-	BlankGroup *rvpb.Presentation_CueGroup
-	BlankCue   *rvpb.Cue
-	LyricGroup *rvpb.Presentation_CueGroup
-	LyricCue   *rvpb.Cue
-	RTFHeader  []byte
-	Library    []*rvpb.Group // known library groups
-	Backgrounds []*rvpb.Cue  // background choices; Backgrounds[0] is the default
+	Pres        *rvpb.Presentation
+	BlankGroup  *rvpb.Presentation_CueGroup
+	BlankCue    *rvpb.Cue
+	LyricGroup  *rvpb.Presentation_CueGroup
+	LyricCue    *rvpb.Cue
+	RTFHeader   []byte
+	Library     []*rvpb.Group // known library groups
+	Backgrounds []*rvpb.Cue   // background choices; Backgrounds[0] is the default
 }
 
 func LoadTemplate() (*Template, error) {
