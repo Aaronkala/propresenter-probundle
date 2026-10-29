@@ -110,8 +110,8 @@ The generator writes it anyway, with correct hashes.
 
 ## 4. `<name>.pro` (protobuf `rv.data.Presentation`)
 
-Schema: `vendor/ProPresenter7-Proto/autogen-proto` (community reverse-engineered, generated for
-ProPresenter 21.4). Decode: `protoc -I vendor/ProPresenter7-Proto/autogen-proto --decode rv.data.Presentation presentation.proto < FILE.pro`.
+Schema: `third_party/ProPresenter7-Proto/autogen-proto` (community reverse-engineered, generated for
+ProPresenter 21.4). Decode: `protoc -I third_party/ProPresenter7-Proto/autogen-proto --decode rv.data.Presentation presentation.proto < FILE.pro`.
 
 Observed: decode then re-encode with Python protobuf gives the same bytes. Only 3 unknown fields exist (section 4.6).
 

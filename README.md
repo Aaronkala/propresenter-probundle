@@ -4,7 +4,7 @@ Read, and later generate, ProPresenter `.probundle` song files.
 
 - Format spec: [`docs/probundle-format.md`](docs/probundle-format.md)
 - Sample: `samples/Suuruutes Äärellä.probundle` (ProPresenter 21.x export)
-- Schema: `vendor/ProPresenter7-Proto/autogen-proto` (see `VENDORED.txt`)
+- Schema: `third_party/ProPresenter7-Proto/autogen-proto` (see `VENDORED.txt`)
 
 ## Setup
 
