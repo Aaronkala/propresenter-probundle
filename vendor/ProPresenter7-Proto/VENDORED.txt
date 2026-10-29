@@ -1,0 +1,3 @@
+Source: https://github.com/greyshirtguy/ProPresenter7-Proto
+Commit: 1c019ab1897286c9bc611f0a10f9f7da8d01dcbb (2026-10-13)
+Only autogen-proto/ is kept. autogen-proto/version.txt = ProPresenter 21.4 (build 352583705).
