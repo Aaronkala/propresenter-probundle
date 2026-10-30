@@ -317,11 +317,15 @@ Decisions taken in `internal/bundle`:
 - **ZIP.** Standard ZIP from Go `archive/zip`: stored, UTF-8 flag set, correct central directory.
   Member order: manifest, then `.pro`. Manifest has one document, empty `media` and `media_references`.
 
-## 6. Open questions (need a ProPresenter machine)
+## 6. Import test results
 
-1. Does import work without `.procore/legacy-export-manifest.json`? (The generator writes one.)
-2. Does import resolve the background video from its original path when the bundle has no mp4?
-   If not, the generator must embed the mp4 and point `url` to `ROOT_SHOW` (section 4.6).
-3. Does a standard ZIP (correct central directory size, UTF-8 flag set) import correctly? Expected: yes.
-4. Does the asset ID (unknown media field 10) make ProPresenter reuse its library asset, or does it
-   create a duplicate media entry for each imported song?
+Observed on the church Mac (2026-10-30) with the generated bundle `God I'm Just Grateful.probundle`:
+
+- A standard ZIP (correct central directory size, UTF-8 flag set) imports correctly.
+- A bundle without the mp4 imports, and the background video plays. ProPresenter finds the video from its original path.
+
+## 7. Open questions
+
+1. Does import work without `.procore/legacy-export-manifest.json`? (The generator writes one, so this is not urgent.)
+2. Does the asset ID (unknown media field 10) make ProPresenter reuse its library asset, or does it
+   create a duplicate media entry for each imported song? Not checked yet.
