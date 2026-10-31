@@ -17,7 +17,7 @@ sequenceDiagram
   U->>S: user edits (same ops as the CLI)
   U->>S: Send feedback / Approve
   L->>S: probundle feedback --wait (returns on feedback)
-  L->>S: more commands; UI updates live
+  L->>S: more commands UI updates live
   U->>S: Export .probundle (or LLM: probundle export)
 ```
 
