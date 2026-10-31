@@ -22,8 +22,8 @@ Source and docs: `~/Projects/propresenter-probundle` (README, `docs/probundle-fo
 
 ## 2. Get the lyrics
 
-- Use only lyrics that the user gives (text, file, or a link the user supplies). Do not write lyrics
-  from memory and do not fill in missing lines. If the lyrics are incomplete, ask the user.
+- Use lyrics that the user gives (text, file, or a link the user supplies). Do not write lyrics
+  from memory and do not fill in missing lines. If the lyrics are incomplete, ask the user. If you only receive the name of the song, search online for the lyrics.
 - Keep the language, spelling and punctuation of the source. Write in normal case; ProPresenter shows capitals.
 - Find the song structure (verses, pre-chorus, chorus, bridge, tag). Write each section once in the
   lyrics file. Put repeats in the arrangement, not in the lyrics.
